@@ -88,6 +88,12 @@ Content-Type: application/json
 **Max payload:** 1 MB → `413 Payload Too Large`
 **Max packages:** 500 per scan → `400 Validation Error`
 
+## Related Tools
+
+| Tool | Description |
+|---|---|
+| [bene-version checker](https://github.com/Beneking102/bene-version-checker) | Insert your Package and Version and find known CVEs and Versions |
+
 ## License
 
 [Business Source License 1.1](./LICENSE) © 2024 Benedikt Pankratz  
@@ -95,5 +101,5 @@ Free for personal & non-commercial use. Converts to MIT on 2028-01-01.
 
 ## Author
 
-**Benedikt Pankratz** — Cybersecurity Consultant  
+**Benedikt Pankratz**
 GitHub: [@Beneking102](https://github.com/Beneking102)
