@@ -8,13 +8,14 @@ import type {
   Severity,
   VulnerabilityEntry,
 } from "@/lib/types";
+import { parseCvssScore, scoreToSeverity } from "@/lib/cvss";
 
 const OSV_BATCH_API      = "https://api.osv.dev/v1/querybatch";
 const OSV_VULN_API       = "https://api.osv.dev/v1/vulns";
 const CHUNK_SIZE         = 100;  // max queries per batch request
 const DETAIL_CONCURRENCY = 40;   // parallel vuln-detail fetches
 const TIMEOUT_MS         = 15_000;
-const USER_AGENT         = "bene-npm-scanner/1.0 (github.com/Beneking102/bene-npm-scanner)";
+const USER_AGENT         = "bene-npm-scanner/1.1.0 (github.com/Beneking102/bene-npm-scanner)";
 
 const SEVERITY_ORDER: Record<Severity, number> = {
   CRITICAL: 5, HIGH: 4, MEDIUM: 3, LOW: 2, UNKNOWN: 1,
@@ -24,43 +25,33 @@ const SEVERITY_ORDER: Record<Severity, number> = {
 interface OsvVulnRef { id: string; modified?: string }
 interface OsvBatchResult { results: Array<{ vulns?: OsvVulnRef[] }> }
 
-function parseCvssScore(vuln: OsvVulnerability): number | null {
+/** Try every known location for a CVSS score, returning the highest found. */
+function extractScore(vuln: OsvVulnerability): number | null {
+  let best: number | null = null;
+
+  // 1. severity[] — may contain proper CVSS v3.x vector strings or plain scores
+  for (const s of vuln.severity ?? []) {
+    const score = parseCvssScore(s.score);
+    if (score > 0 && (best === null || score > best)) best = score;
+  }
+
+  // 2. database_specific.cvss — GitHub Advisory format (numeric string or vector)
   const raw = vuln.database_specific?.cvss;
-  if (!raw) return null;
-  const m = /(\d+\.\d+)/.exec(raw);
-  if (!m?.[1]) return null;
-  const n = parseFloat(m[1]);
-  return isNaN(n) ? null : n;
+  if (raw) {
+    const score = parseCvssScore(raw);
+    if (score > 0 && (best === null || score > best)) best = score;
+  }
+
+  return best;
 }
 
 function parseSeverity(vuln: OsvVulnerability): Severity {
-  // 1. Prefer database_specific.severity (GitHub Advisory format)
+  // 1. Prefer database_specific.severity (GitHub Advisory named level)
   const dbSev = vuln.database_specific?.severity?.toUpperCase();
   if (dbSev && dbSev in SEVERITY_ORDER) return dbSev as Severity;
 
-  // 2. Fall back to CVSS numeric score
-  const score = parseCvssScore(vuln);
-  if (score !== null) {
-    if (score >= 9.0) return "CRITICAL";
-    if (score >= 7.0) return "HIGH";
-    if (score >= 4.0) return "MEDIUM";
-    if (score >= 0.1) return "LOW";
-  }
-
-  // 3. Try the severity array (some ecosystems use CVSS vector strings or named levels)
-  for (const s of vuln.severity ?? []) {
-    const n = parseFloat(s.score);
-    if (!isNaN(n)) {
-      if (n >= 9.0) return "CRITICAL";
-      if (n >= 7.0) return "HIGH";
-      if (n >= 4.0) return "MEDIUM";
-      return "LOW";
-    }
-    const u = s.score.toUpperCase();
-    if (u in SEVERITY_ORDER) return u as Severity;
-  }
-
-  return "UNKNOWN";
+  // 2. Derive from best available CVSS score
+  return scoreToSeverity(extractScore(vuln));
 }
 
 function highestSeverity(severities: Severity[]): Severity {
@@ -82,7 +73,7 @@ function extractFixedVersion(vuln: OsvVulnerability): string | null {
 }
 
 function mapVuln(vuln: OsvVulnerability): VulnerabilityEntry {
-  const score = parseCvssScore(vuln);
+  const score = extractScore(vuln);
   return {
     id:          vuln.id,
     aliases:     vuln.aliases ?? [],
@@ -136,7 +127,10 @@ export async function scanPackages(packages: PackageInput[]): Promise<ScanReport
     });
     if (!res.ok) throw new Error(`OSV batch API returned ${res.status}`);
     const data = await res.json() as OsvBatchResult;
-    for (const result of data.results ?? []) {
+    if ((data.results?.length ?? 0) !== chunk.length) {
+      throw new Error(`OSV result count mismatch: expected ${chunk.length}, got ${data.results?.length ?? 0}`);
+    }
+    for (const result of data.results) {
       idResults.push(result.vulns ?? []);
     }
   }

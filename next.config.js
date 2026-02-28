@@ -24,18 +24,20 @@ const nextConfig = {
           {
             key: "Content-Security-Policy",
             value: [
-              "default-src 'self'",
+              "default-src 'none'",
               // Dev: Next.js webpack bundles use eval() for HMR source maps
               isDev
                 ? "script-src 'self' 'unsafe-inline' 'unsafe-eval'"
                 : "script-src 'self' 'unsafe-inline'",
-              "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-              "font-src 'self' https://fonts.gstatic.com",
+              // Fonts are self-hosted via next/font/google — no external font domains needed
+              "style-src 'self' 'unsafe-inline'",
+              "font-src 'self'",
               "img-src 'self' data:",
+              // OSV API is called server-side only; browser never fetches it directly
               // Dev: also allow WebSocket connections for HMR
               isDev
-                ? "connect-src 'self' https://api.osv.dev ws://localhost:* wss://localhost:*"
-                : "connect-src 'self' https://api.osv.dev",
+                ? "connect-src 'self' ws://localhost:* wss://localhost:*"
+                : "connect-src 'self'",
               "frame-ancestors 'none'",
               "base-uri 'self'",
               "form-action 'self'",

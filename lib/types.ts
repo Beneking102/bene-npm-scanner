@@ -1,18 +1,6 @@
 // Copyright (c) 2024 Benedikt Pankratz
 // Licensed under the Business Source License 1.1
 
-export interface PackageJson {
-  dependencies?:     Record<string, string>;
-  devDependencies?:  Record<string, string>;
-  peerDependencies?: Record<string, string>;
-  name?:    string;
-  version?: string;
-}
-
-export type ScanInput =
-  | { type: "packageJson"; content: PackageJson }
-  | { type: "packageList"; packages: Array<{ name: string; version: string }> };
-
 // OSV.dev API types
 export interface OsvPackage {
   name:      string;
@@ -41,7 +29,6 @@ export interface OsvVulnerability {
     severity?: string;
     cvss?:     string;
     cwe_ids?:  string[];
-    url?:      string;
   };
 }
 

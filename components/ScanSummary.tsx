@@ -8,9 +8,28 @@ const SEVERITY_CFG = [
   { key: "low",      label: "LOW",      color: "text-blue-400",   bg: "bg-blue-950/40",   border: "border-blue-800/40"   },
 ] as const;
 
+/** Returns "28 Feb 2026 · 14:30 CET / 08:30 ET" */
+function formatDualTimezone(iso: string): { date: string; times: string } {
+  const d = new Date(iso);
+  const date = d.toLocaleDateString("en-GB", {
+    timeZone: "Europe/Berlin",
+    day: "2-digit", month: "short", year: "numeric",
+  });
+  const cet = d.toLocaleTimeString("en-GB", {
+    timeZone: "Europe/Berlin",
+    hour: "2-digit", minute: "2-digit", timeZoneName: "short",
+  });
+  const et = d.toLocaleTimeString("en-US", {
+    timeZone: "America/New_York",
+    hour: "2-digit", minute: "2-digit", timeZoneName: "short",
+  });
+  return { date, times: `${cet} / ${et}` };
+}
+
 export function ScanSummary({ report }: { report: ScanReport }) {
   const isClean    = report.affectedCount === 0;
   const totalVulns = Object.values(report.counts).reduce((a, b) => a + b, 0);
+  const { date, times } = formatDualTimezone(report.scannedAt);
 
   return (
     <div className="rounded-xl border border-[#0d2b0d] bg-[#0a110a] p-5 space-y-4">
@@ -26,10 +45,9 @@ export function ScanSummary({ report }: { report: ScanReport }) {
           </p>
         </div>
         <div className="text-right">
-          <p className="font-mono text-xs text-[#4a7a52]">
-            {new Date(report.scannedAt).toLocaleString("en-GB", { dateStyle: "short", timeStyle: "medium" })}
-          </p>
-          <p className="font-mono text-xs text-[#4a7a52]">via OSV.dev</p>
+          <p className="font-mono text-xs text-[#4a7a52]">{date}</p>
+          <p className="font-mono text-xs text-[#4a7a52]">{times}</p>
+          <p className="font-mono text-xs text-[#3a5a3a] mt-0.5">via OSV.dev</p>
         </div>
       </div>
 

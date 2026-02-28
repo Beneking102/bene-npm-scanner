@@ -1,15 +1,17 @@
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Syne:wght@400;500;600;700;800&display=swap');
+@import "tailwindcss";
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@theme {
+  /* next/font/google injects --font-jetbrains and --font-syne on <html> */
+  --font-sans: var(--font-syne), system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains), "Fira Code", monospace;
+}
 
 *, *::before, *::after { box-sizing: border-box; }
 
 html {
   background-color: #030804;
   color: #c8ffd4;
-  font-family: 'Syne', sans-serif;
+  font-family: var(--font-sans), sans-serif;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -30,7 +32,7 @@ body::before {
   z-index: 9999;
 }
 
-pre, code { font-family: 'JetBrains Mono', monospace; }
+pre, code { font-family: var(--font-mono), monospace; }
 
 textarea:focus { outline: none; box-shadow: 0 0 0 1px #00e541, 0 0 16px rgba(0,229,65,0.15); }
 

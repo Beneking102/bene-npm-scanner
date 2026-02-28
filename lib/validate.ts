@@ -114,12 +114,16 @@ function tryAddPackage(
   out.push({ name: name.trim(), version: version.trim(), isDev });
 }
 
+const WALK_MAX_DEPTH = 20;
+
 function walkLockV1(
   deps: Record<string, unknown>,
   out: PackageInput[],
   seen: Set<string>,
   skipped: string[],
+  depth = 0,
 ): void {
+  if (depth > WALK_MAX_DEPTH) return;
   for (const [name, val] of Object.entries(deps)) {
     if (typeof val !== "object" || val === null) continue;
     const v = val as Record<string, unknown>;
@@ -127,7 +131,7 @@ function walkLockV1(
       tryAddPackage(name, v["version"], v["dev"] === true, out, seen, skipped);
     }
     if (typeof v["dependencies"] === "object" && v["dependencies"] !== null) {
-      walkLockV1(v["dependencies"] as Record<string, unknown>, out, seen, skipped);
+      walkLockV1(v["dependencies"] as Record<string, unknown>, out, seen, skipped, depth + 1);
     }
   }
 }

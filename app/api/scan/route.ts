@@ -19,9 +19,10 @@ function err(error: string, code: string, status: number): NextResponse<ApiRespo
 
 export async function POST(request: Request): Promise<NextResponse<ApiResponse>> {
   // 1. Rate limit (relaxed in local dev: all local requests share "unknown" as IP)
-  const isDev = process.env.NODE_ENV === "development";
-  const ip    = getClientIp(request);
-  const limit = checkRateLimit(ip, isDev ? 1000 : 10, 60_000);
+  const isDev     = process.env.NODE_ENV === "development";
+  const ip        = getClientIp(request);
+  const rateLimit = isDev ? 1000 : Math.max(1, parseInt(process.env.RATE_LIMIT_PER_MIN ?? "10", 10) || 10);
+  const limit     = checkRateLimit(ip, rateLimit, 60_000);
   if (!limit.allowed) {
     return NextResponse.json<ApiResponse>(
       { ok: false, error: "Too many requests. Please wait before scanning again.", code: "RATE_LIMITED" },
@@ -32,6 +33,15 @@ export async function POST(request: Request): Promise<NextResponse<ApiResponse>>
   // 2. Content-Type
   if (!(request.headers.get("content-type") ?? "").includes("application/json")) {
     return err("Content-Type must be application/json.", "INVALID_CONTENT_TYPE", 415);
+  }
+
+  // 2.5. Early size reject via Content-Length header (before buffering the body)
+  const contentLengthHeader = request.headers.get("content-length");
+  if (contentLengthHeader !== null) {
+    const cl = parseInt(contentLengthHeader, 10);
+    if (!isNaN(cl) && cl > MAX_BODY_BYTES) {
+      return err(`Request body too large (max ${MAX_BODY_BYTES / 1000} KB).`, "PAYLOAD_TOO_LARGE", 413);
+    }
   }
 
   // 3. Parse & size guard
@@ -58,7 +68,7 @@ export async function POST(request: Request): Promise<NextResponse<ApiResponse>>
       {
         status: 200,
         headers: {
-          "Cache-Control": report.affectedCount === 0 ? "private, max-age=300" : "no-store",
+          "Cache-Control": "no-store",
           "X-Remaining-Requests": String(limit.remaining),
         },
       }

@@ -36,7 +36,7 @@ export function checkRateLimit(
   if (entry.timestamps.length >= limit) {
     const oldest  = entry.timestamps[0] ?? now;
     store.set(identifier, entry);
-    return { allowed: false, remaining: 0, resetInMs: windowMs - (now - oldest) };
+    return { allowed: false, remaining: 0, resetInMs: Math.max(0, windowMs - (now - oldest)) };
   }
 
   entry.timestamps.push(now);

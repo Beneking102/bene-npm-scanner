@@ -30,12 +30,14 @@ const FILTERS: Array<{ label: string; value: Filter }> = [
 const SORDER: Record<string, number> = { CRITICAL: 5, HIGH: 4, MEDIUM: 3, LOW: 2, UNKNOWN: 1 };
 
 function sortReport(report: ScanReport): ScanReport {
-  report.packages.sort((a, b) => {
-    if (a.vulnerabilities.length > 0 && b.vulnerabilities.length === 0) return -1;
-    if (a.vulnerabilities.length === 0 && b.vulnerabilities.length > 0) return 1;
-    return (SORDER[b.highestSeverity] ?? 0) - (SORDER[a.highestSeverity] ?? 0);
-  });
-  return report;
+  return {
+    ...report,
+    packages: report.packages.slice().sort((a, b) => {
+      if (a.vulnerabilities.length > 0 && b.vulnerabilities.length === 0) return -1;
+      if (a.vulnerabilities.length === 0 && b.vulnerabilities.length > 0) return 1;
+      return (SORDER[b.highestSeverity] ?? 0) - (SORDER[a.highestSeverity] ?? 0);
+    }),
+  };
 }
 
 export function Scanner() {
@@ -234,7 +236,7 @@ export function Scanner() {
 
           {/* Info strip */}
           <div className="rounded-lg bg-[#0a110a] border border-[#0d2b0d] px-4 py-2.5 flex flex-wrap gap-x-6 gap-y-1">
-            {["No data stored on server", "Powered by OSV.dev", "10 scans / min per IP"].map((t) => (
+            {["No data stored on server", "Powered by OSV.dev", "Rate limited per IP"].map((t) => (
               <span key={t} className="text-xs font-mono text-[#4a7a52] flex items-center gap-1.5">
                 <span className="text-[#00e541]">✓</span> {t}
               </span>
