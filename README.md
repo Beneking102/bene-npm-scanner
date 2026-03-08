@@ -255,4 +255,3 @@ For the full license text see [BUSL-1.1](https://spdx.org/licenses/BUSL-1.1.html
 ---
 
 © 2026 Benedikt Pankratz · [@Beneking102](https://github.com/Beneking102)
-
